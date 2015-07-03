@@ -1,6 +1,6 @@
 # CAT Solver Sudoku Project
 # CSC 320
-# Jakob Roberts & Joe Czepil
+# Jakob Roberts & Joe Czepil & Cole McGinn
 #==============================================================================
 import sys
 #==============================================================================
