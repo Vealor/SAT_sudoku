@@ -3,8 +3,42 @@
 # Jakob Roberts & Joe Czepil & Cole McGinn
 #==============================================================================
 import sys
+from subprocess import call
+#==============================================================================
+def errorP():
+	print "  ____                   "
+	print " / __ \                  "
+	print "| |  | | ___  _ __  ___  "
+	print "| |  | |/ _ \|  _ \/ __| "
+	print "| |__| | (_) | |_) \__ \ "
+	print " \____/ \___/| .__/|___/ "
+	print "             | |         "
+	print "             |_|	        "
+	print " SOMETHING BROKE!!!!!!!! "
+#==============================================================================
+def checkMiniSat():
+	if call(['which','minisat'])==0:
+		minisat = 'minisat'
+		print "You are running << Minisat 1 >>"
+	elif call(['which','minisat2']) ==0:
+		minisat = 'minisat2'
+		print "You are running << Minisat 2 >>"
+	else:
+		print "Ain't no minisat here!!"
+		errorP()
+		return
+#==============================================================================
+def doMiniSat(input):
+	checkMiniSat()
+	
+	print "test"
+	
+
+
 #==============================================================================
 def theSolver(inlines):
+	input = inlines
+	doMiniSat(input)
 	print inlines
 
 #==============================================================================
@@ -24,7 +58,7 @@ def main():
 	if canread:
 		with infile:
 			thelines = infile.readlines()
-		ret = thesolver(thelines)
+		ret = theSolver(thelines)
 	
 #==============================================================================
 if __name__ == "__main__":
