@@ -53,13 +53,14 @@ def main():
 		canread = True
 	except IOError:		#file doesn't exist so print error!
 		print("File specified does not exist!")
-	
+
 	#-- PARSE FILE/INPUT
 	if canread:
 		with infile:
 			thelines = infile.readlines()
+
 		ret = theSolver(thelines)
-	
+
 #==============================================================================
 if __name__ == "__main__":
 	main()
