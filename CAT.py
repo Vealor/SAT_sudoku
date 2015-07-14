@@ -30,16 +30,30 @@ def checkMiniSat():
 #==============================================================================
 def doMiniSat(input):
 	checkMiniSat()
-	
+
 	print "test"
-	
+
 
 
 #==============================================================================
-def theSolver(inlines):
-	input = inlines
-	doMiniSat(input)
-	print inlines
+def getdemacs(inlines):
+	xaxis = 1
+	yaxis = 1
+	count = 0
+	dimacs = []
+	puzzle = inlines[0]
+	while(xaxis < 10):
+		dimnum = ((81*(int(float(xaxis)) - 1)) + (9*(int(float(yaxis)) - 1)) + ((int(float(puzzle[count]))) + 1))
+		dimacs.append(dimnum)
+		yaxis += 1
+		if(yaxis == 10):
+			xaxis += 1
+			yaxis = 1
+		print("%d\n"% dimacs[count])
+		count += 1
+
+	return dimacs
+
 
 #==============================================================================
 def main():
@@ -59,7 +73,9 @@ def main():
 		with infile:
 			thelines = infile.readlines()
 
-		ret = theSolver(thelines)
+		ret = getdemacs(thelines)
+
+
 
 #==============================================================================
 if __name__ == "__main__":
