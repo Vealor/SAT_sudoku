@@ -1,0 +1,72 @@
+#!/bin/sh
+#
+xecho() {
+	echo $*
+	exit 0
+}
+
+#if test -f /bin/arch
+#then
+#	case `/bin/arch` in
+#	
+#	sun3)	xecho mc68020;;
+#	
+#	sun4)	xecho sparc;;
+#	
+#	sun386)	xecho i386.bsd;;
+#
+#	vax4.3)	xecho vax.bsd;;
+#
+#	i586) xecho linux;;
+#	
+#	esac
+#fi
+
+if test -f /bin/uname
+then
+	case `/bin/uname -m` in
+
+	mips)	xecho mips;;
+
+	9000/834)	xecho 9000.834;;
+
+	vaxbi)	xecho vax.sysv;;
+
+	mc68k)	xecho mc68k;;
+
+	sun4*)  case `/bin/uname -r` in
+		4*) xecho sparc;;
+		*) xecho solaris;;
+		esac
+		;;
+
+	i586) xecho linux;;
+
+	5890)	xecho UTS;;
+
+	i386)	xecho i386.sysv;;
+
+	3B2)	xecho u3b2;;
+
+	IP*)	case `/bin/uname -r` in
+		5*) xecho irix5;;
+		6*) xecho irix6;;
+		* ) xecho irix;;
+		esac
+		;;
+	esac
+
+	case `/bin/uname -s` in
+
+	AIX)	xecho aix;;
+
+	esac
+fi
+
+
+if test -f /usr/ipc/lib/ns.db
+then
+	xecho vax.res
+fi
+
+xecho UNKNOWN

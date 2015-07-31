@@ -1,0 +1,78 @@
+#!/bin/csh -f -e
+# Command-line oriented version of gsat, reads from stdin
+
+set infile = ""
+set outfile = ""
+set catout = 0
+set paramfile = /tmp/Gsat.param.$$
+rm -f $paramfile
+echo > $paramfile
+set gsat = xgsat
+
+# defaults
+set tries = 10
+set flips = x10
+
+while (${#argv} >= 1)
+	if (X"$1" == "X-help") then
+		echo "Use: Gsat [file] -option ... "
+		echo "  Options as for gsat, but begin with a dash -"
+		echo "  E.g.:  Gsat -walk 0.5 -m -tries 10 -flips x10"
+		echo "  Wff file (if any) must be first argument,"
+		echo "    unless -wff file option is given"
+		echo "  If no wff file given, read wff from stdin"
+		echo "  If no -report filename option given, print"
+		echo "    report to stdout"
+		echo "  Defaults: tries = 10, flips = x10"
+		exit
+	else if (X"$1" == "X-wff") then
+		shift
+		set infile = $1
+		shift
+	else if (X"$1" == "X-flips") then
+		shift
+		set flips = $1
+		shift
+	else if (X"$1" == "X-tries") then
+		shift
+		set tries = $1
+		shift
+	else if (X"$1" == "X-report") then
+		shift
+		set outfile = $1
+		shift
+	else if (X"$1" =~ X-*) then
+		set param = ( `expr substr "$1" 2 30` )
+		shift
+		while ($#argv >= 1 && X"$1" !~ X-*)
+			set param = ( $param $1 )
+			shift
+		end
+		echo $param >> $paramfile
+	else
+		set infile = $1
+		shift
+	endif
+end
+
+if (X"$outfile" == X"") then
+	set outfile = /tmp/Gsat.out.$$
+	set catout = 1
+endif
+
+if (X"$infile" == X"") then
+	set infile = /tmp/Gsat.in.$$
+	cat > $infile	
+endif
+
+echo "$infile\
+/dev/null\
+$outfile\
+$flips\
+$tries" | cat - $paramfile | $gsat
+
+if ($catout) then
+	cat $outfile
+endif
+
+rm -f /tmp/Gsat.*.$$

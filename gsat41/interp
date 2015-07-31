@@ -1,0 +1,90 @@
+#!/bin/csh -f
+
+set awk = nawk
+( ${awk} '' </dev/null ) >& /dev/null
+if ( $status ) set awk = awk
+
+set f = `${awk} '/^wff_file:/{print $2; exit}' $1`
+if ("$f" == "") then
+	set f = ${1}
+endif
+set f = ${f:t}
+set f = ${f:r}
+echo "Interpreting report file $1, based on wff $f"
+if (! -r ${f}.map) then
+	echo "Cannot find mapfile ${f}.map"
+	exit -1
+endif
+
+if (`grep -c 'Unsat clauses in best model:' $1` != 0) then
+echo "Unsatisfied clauses are:"
+${awk} '\
+function Integerp( x ) { return x ~ "^-?[0-9]+$";}\
+BEGIN { mapfile="'${f}.map'"; reportfile="'$1'"; \
+    unsatexpr = "Unsat clauses in best model:"\
+    maxvar = 0;\
+    while ( 0 < (getline temp < mapfile)){\
+	mapping[++maxvar] = temp;\
+    }\
+    done = 0;\
+    while ( \!done && 0 < (getline < reportfile)){\
+	if ( $0 ~ unsatexpr ) {\
+	    while ( \!done && 0 < (getline < reportfile)){\
+		for (i=1; i<=NF; i++){\
+		    if (Integerp($i)) {\
+			prop = $i;\
+			if (i > 1)\
+			  printf " or ";\
+			if (prop < 0)\
+			  printf " not %s ", mapping[-prop];\
+			else\
+			  printf " %s ", mapping[prop];\
+		    }\
+		    else {\
+			done = 1;\
+			break;\
+		    }\
+		}\
+		printf "\n";\
+	    }\
+	}\
+    }\
+}'
+endif
+      
+echo "Assignment is:"
+${awk} '\
+function Integerp( x ) { return x ~ "^-?[0-9]+$";}\
+BEGIN { mapfile="'${f}.map'"; reportfile="'$1'"; \
+    assignexpr = "Positive literals in best model:|positive literals:|assignment:|setq \\*gsat-model-list\\*" ;\
+    maxvar = 0;\
+    while ( 0 < (getline temp < mapfile)){\
+	mapping[++maxvar] = temp;\
+    }\
+    found = 0;\
+    while ( 0 < (getline < reportfile)){\
+	if ( $0 ~ assignexpr ) { found = 1; break;}}\
+    if ( found ) {\
+	i = 1;\
+	while (i <= NF && \!Integerp($i)) i++;\
+	while ( 1 ){\
+		for (; i<=NF; i++){\
+			if (Integerp($i)){\
+				if ($i > 0) print mapping[$i];}\
+			else exit;}\
+		if ((getline < reportfile) <= 0) exit;\
+		i = 1;\
+	}\
+    }\
+}' \
+	| sed -e 's/\(.*\)\(,\)\([0-9][0-9]*)\)/\3\1\,/\
+			s/SOURCE/Source/\
+			s/source/Source/\
+			s/OBJECT/Object/\
+			s/object/Object/\
+			s/DESTINATION/Destination/\
+			s/destination/Destination/' \
+	| sort -n \
+	| sed -e 's/\([0-9][0-9]*)\)\(.*\)/\2\1/'
+
+

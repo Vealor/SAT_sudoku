@@ -1,0 +1,3 @@
+#!/bin/csh -f -e
+set stub=$1
+cat ${stub}.nl | ampl2eqn | eqn2clause -offset > ${stub}.np

@@ -1,0 +1,1008 @@
+			  GSAT USER'S GUIDE
+
+			      Version 35
+				   
+		      Bart Selman & Henry Kautz
+			AT&T Bell Laboratories
+		   {selman,kautz}@research.att.com
+
+I.  INTRODUCTION
+
+GSAT is a randomized greedy local search algorithm for solving
+propositional satisfiability problems expressed in clausal form.  It
+tries to find a truth-assignment that satisfies the formula.  If the
+formula is unsatisfiable, however, it cannot prove that no such
+assignment exists; it simply fails to find one.
+
+The basic GSAT algorithm is as follows:
+
+procedure GSAT
+Input:  a set of clauses CL, and integers MAX-FLIPS, and MAX-TRIES.
+Output: a satisfying truth assignment of CL, if any is found.
+begin
+   for i := 1 to MAX-TRIES:
+      T := a randomly generated truth assignment;
+      for j := 1 to MAX-FLIPS:
+         if T satisfies CL then return T;
+         for each variable p:
+            let MAKE[p] = the number of clauses currently unsatisfied
+               by T that would become satisfied if the truth value of
+               p were reversed ("flipped").
+            let BREAK[p] = the number of clauses currently satisfied
+               by T that would become unsatisfied if the truth value of
+               p were flipped.
+            let DIFF[p] = MAKE[p] - BREAK[p];
+         end for
+         let MAX_DIFF_LIST = list of variables with the greatest DIFF;
+         p := a random member of MAX_DIFF_LIST;
+         T := T with the truth assignment of p flipped;
+      end for
+   end for
+   return "no satisfying assignment found";
+end.
+
+GSAT is thus a "greedy" algorithm, that tries to flip variables so
+that as many clauses as possible are satisfied.  Note that if the
+chosen variable p is such that DIFF[p] > 0, then the total number of
+unsatisfied clauses decreases.  We call this a "downward" move.  If
+DIFF[p] = 0, then the total number of satisfied clauses remains
+constant; we call this a "sideways" move.  Finally, if the flipped
+variable has DIFF[p] < 0, then an "upwards" move is performed, in
+which the number of satisified clauses decreases.  We refer to each
+interation of the inner loop as a "flip", and each iteration of the
+outer loop as a "try".
+
+GSAT has many extra options --- for basic use you can ignore most of
+them.  Optional features include the use of simulated annealing rather
+than greedy search; various ways of initializing the starting state;
+tabu search; and clause weights.  The implementation of GSAT is highly
+optimized.  For example, the DIFF array is incrementally updated after
+each flip, rather than being computed from scratch each time.
+
+A preliminary version of an interface between GSAT and the AMPL
+modeling language (for 0/1 integer programming) is also available, as
+described below.
+
+GSAT version 26 (and later) includes a "hillclimb" option, which
+modifies the above algorithm by considering all variables with DIFF >=
+1 to be equally good, and all with DIFF <= -1 to be equally bad.
+Thus, it is not quite as greedy.  Because of this change the
+implementation is able to store all the variables in three buckets
+(up, down, and sideways), and quickly shuffle variables between the
+buckets after each flip.  This leads to about a 20 fold speedup for
+wffs with very large numbers of variables (10,000 or up) when the
+"walk" or "tabu" options (described below) are used.
+
+
+II.  OBTAINING AND COMPILING GSAT
+
+Contact the authors {selman,kautz}@research.att.com for information on
+how to obtain a copy of GSAT.
+
+We have been able to compile GSAT in Sun, Mips, and SGI environments.
+You can probably compile it by simply typing "make" in the source
+directory.  If you discover modifications to the Makefile or source
+code are necessary to allow compilation on your platform, please send
+us that information.  It is probably the case that we have implicitly
+assumed 32 bit integers in various places in the code.
+
+In the distribution, pre-compiled binaries for GSAT are identified
+as follows, where NN is the version number:
+	gsatNN_sparc - Sun OS 4.3
+	gsatNN_SGIirix5 - Silicon Graphics IRIX 5.xx, ELF 32-bit MSB MIPS
+	gsatNN_SGIirix4 - Silicon Graphics IRIX 4.xx, MIPSEB COFF
+
+III.  BASIC USE
+
+Type "gsat", and answer the prompts.
+
+To get a feel for the code, use GSAT to solve the example formula
+stored in this directory in file "ex.wff".  (wff stands for
+Well-Formed-Formula). You can simply hit return on many prompts.
+
+      <unix-prompt>% gsat			% TYPE PROGRAM NAME
+      program: gsat version 24, April 1993
+      host: adhoc
+      machine: sun4c
+      wff_file: ex.wff				% TYPE WFF FILENAME
+      wff_file: ex.wff
+      assign file (default = /dev/null): a	% TYPE FILENAME
+      assign_file: a
+      report file (default = /dev/null): b	% TYPE FILENAME
+      report_file: b
+      max flips (default = # vars x 5; enter N or xN):	% JUST HIT RETURN
+      max_flips: 5 x num_vars
+      max tries (default = 1): 20		% TYPE VALUE FOR MAX_TRIES
+      max_tries: 20
+      option (? for help): 			% JUST HIT RETURN
+      Reading (f-style) input
+      nvars=50, nclauses=215, nlits=645
+      Wff read
+      max_flips: 250
+      sec: 734895929  usec: 848377
+      Random seed:  734895929      848377
+      Initialization Complete
+      Resetting weights
+      TRY 1: init_bad=28, max_diff=0, num_bad=1, low_bad=1, d=15 s=235 u=0 n=0
+      TRY 2: init_bad=30, max_diff=0, num_bad=1, low_bad=1, d=16 s=234 u=0 n=0
+      TRY 3: init_bad=31, max_diff=0, num_bad=2, low_bad=2, d=17 s=233 u=0 n=0
+      TRY 4: init_bad=27, max_diff=0, num_bad=1, low_bad=1, d=17 s=233 u=0 n=0
+      TRY 5: init_bad=34, max_diff=0, num_bad=2, low_bad=2, d=16 s=234 u=0 n=0
+      TRY 6: init_bad=23, max_diff=0, num_bad=2, low_bad=2, d=14 s=236 u=0 n=0
+      TRY 7: init_bad=30, max_diff=0, num_bad=2, low_bad=2, d=15 s=235 u=0 n=0
+      TRY 8: init_bad=28, max_diff=0, num_bad=4, low_bad=4, d=14 s=236 u=0 n=0
+      TRY 9: init_bad=19, max_diff=0, num_bad=1, low_bad=1, d=10 s=240 u=0 n=0
+      TRY 10: init_bad=25, max_diff=0, num_bad=2, low_bad=2, d=12 s=238 u=0 n=0
+      TRY 11: init_bad=20, max_diff=0, num_bad=1, low_bad=1, d=12 s=238 u=0 n=0
+      TRY 12: init_bad=29, max_diff=0, num_bad=2, low_bad=2, d=16 s=234 u=0 n=0
+      TRY 13: init_bad=32, max_diff=1, num_bad=0, low_bad=0, d=17 s=21 u=0 n=0
+
+
+      DATA on BEST assignment stored
+      best_flip:             38
+      best_try:              13
+      best_num_bad:          0
+      best_max_diff:         1
+      best_downwards:        17
+      best_sideways:         21
+      best_upwards:          0
+      best_forced:           0
+      best_null:             0
+
+      WFF SATISFIED BY ASSIGN
+     <unix-prompt>% 
+
+During its run, GSAT prints out info after each try.  For example,
+
+      TRY 1: init_bad=28, max_diff=0, num_bad=1, low_bad=1, d=15 s=235 u=0 n=0
+
+means that the initial assignment left 28 clauses unsatisfied.  At the
+end of the try, 1 clause was left unsatisfied (num_bad), and this was
+also the LOWEST number of clauses (low_bad) reached during this try.
+During the try, the program did 15 flips that reduced the number of
+unsatisfied clauses, and it made 235 flips that did not effect the
+total number of satisfied clauses (sideways moves).  The "max_diff"
+value is the DIFF value of the last flip during the try.
+
+The final group of statements assert that on this run GSAT found a
+solution to ex.wff on the 13th try.  On that try, the solution was
+found on the 38th flip.  Note the best_max_diff is 1, meaning that the
+last flip during this try decreased the number of unsatisfied clauses
+from 1 to 0.
+
+Thus for GSAT's basic use you only have to set the MAX_FLIPS and
+MAX_TRIES parameters.  MAX_FLIPS is either an absolute integer, or if
+preceded by the letter "x", a factor multiplied by the number of
+variables in the wff. So, on a wff with 100 variables "x5" (the
+default) sets max_flips to 500.
+
+We often found x10 or x20 quite useful for MAX_FLIPS. MAX_TRIES
+depends on how long you want to keep trying (if the formula is
+unsatisfiable GSAT will just keep going until it reaches MAX_TRIES).
+Different classes of formulas have different optimal settings for
+MAX_FLIPS and MAX_TRIES. You'll have to play around a bit to get a
+feel for a good setting.  For instance, we have also identified
+classes of formulas that run best with MAX_FLIPS = "#varsx", i.e.,
+(#vars)^2 flips, where #vars is the number of variables in the
+formula.
+
+You can also run this example by typing the command
+	gsat < ex.in
+so that command input to gsat comes from the file ex.in.  You can try
+some other formulas by generating them using the "mwff" program, which
+is included with the GSAT distribution.
+
+The GSAT distribution also includes a script
+	Gsat [file] -option ...
+for running GSAT in a stream-oriented manner.  Options appear on the
+command line, instead of being entered interactively.  Options as for
+gsat, but begin with a dash -.  E.g.:
+	Gsat -walk 0.5 -m -tries 10 -flips x10
+In addition to the options described below, the following options are
+interpreted appropriately:
+	-tries N
+	-flips N
+	-report FILE
+	-wff FILE
+Wff file (if any) must be first argument, unless -wff file option is
+given.  If no wff file given, read wff from stdin.  If no -report
+filename option given, print report to stdout.  Defaults: tries = 10,
+flips = x10.
+
+IV.  ASSIGNMENT AND REPORT FILES
+
+Continuing with the ex.wff example, we have specified that the actual
+satisfying assignment should appear the in the file "a":
+
+      ;;; program: gsat version 24, April 1993
+      (setq *gsat-wff-file* "ex.wff")
+      (setq *gsat-nvars* 50)
+      (setq *gsat-nclauses* 215)
+      (setq *gsat-nlits* 645)
+      (setq *gsat-max-flips* 250)
+      (setq *gsat-max-tries* 20)
+
+      (setq *gsat-best-num-bad* 0)
+      (setq *gsat-assign-found* t )
+
+      ;;; List of positive literals in the model
+      (setq *gsat-model-list* '( 
+      1  2  3  5  6  7  8  15  17 
+      18  20  21  22  23  24  26  28  29  32 
+      33  34  36  38  41  42  45  46  48  49 
+      50 
+      ))
+
+      ;;; Model vector; first element not used
+      (setq *current-propositional-model* (vector 0 
+      1  1  1  0  1  1  1  1  0  0 
+      0  0  0  0  1  0  1  1  0  1 
+      1  1  1  1  0  1  0  1  1  0 
+      0  1  1  1  0  1  0  1  0  0 
+      1  1  0  0  1  1  0  1  1  1 
+      ))
+
+The format of this assignment file is such that it can be easily
+loaded into LISP, if desired.
+
+A great many statistics about the execution of GSAT are written to the
+report file "b".  Following is the report file generated by ex.wff,
+interspersed with some commentary.  Note that the report you generate
+by running the example will probably include some different numbers,
+unless you force the random number generator to use the same seeds, as
+described below.  GSAT versions 26 and later generate a default report
+file name based on the date and time of execution and the input wff
+name.
+
+      REPORT START
+      program: gsat version 24, April 1993
+      host: adhoc
+      machine: sun4c
+      wff_file: ex.wff
+      nvars (number of variables): 50
+      nclauses (number of clauses): 215
+      nlits (length of wff): 645
+      assign_file: a
+      report_file: b
+      max_flips: 250
+      max_tries: 20
+
+The first ground of statements describe the program, the wff, the
+hardware, and the maximum number of flips and tries.
+
+      reset_tries: 1
+      flips_per_reset: 250
+      flag_init_prop: 0
+      flag_walk: 0 / 10000000
+      flag_walk_all_vars: 0
+      flag_prefer_pos_make: 0 / 10000000 
+      flag_direction: 0
+      flag_multiple_assign: 0
+      boost_threshhold: 0
+      boost_amount: 0
+      rand_method: 3
+      seed1: 734895929
+      seed2: 848377
+      mask: 0100000
+      negative: 50 / 100
+      pause_usecs: 0
+      flag_coloring: 0
+      flag_force_binaries: 0
+      reset_weight_tries: 1
+      weight_update_amt: 1
+      flag_weigh_clauses: 0
+      flag_anneal: 0
+      flag_save_best_max: 20
+      flag_adaptive: 0
+      tabu_list_length: 0
+
+The second group describes the settings of the optional parameters,
+which are described later in this document.  This group also includes
+the random number seeds, which can be used to exactly reconstruct this
+run of the program.
+
+      total_num_assigns (number of assignments found): 1
+      total_sum_flips: 3038
+      total_sum_tries: 13
+      total_sum_successful_flips: 38
+      total_downwards: 191
+      total_upwards: 0
+      total_sideways: 2847
+      total_forced: 0
+      total_null: 0
+
+      percent_downwards:  0.063
+      percent_upwards:    0.000
+      percent_sideways:   0.937
+      percent_forced:     0.000
+      percent_null:       0.000
+
+The third group gives the raw totals for the flips performed in all
+tries, and the fourth translates this to percentages.  We see that, as
+usual, GSAT makes mostly sideways flips (i.e., the DIFF is 0).
+("Null" flips involve the simulated annealing option described later.)
+
+      experiment_seconds: 0.640000
+
+      assigns_per_second: 1.562500
+      flips_per_second: 4746.875000
+      tries_per_second: 20.312500
+      assignments_per_try: 0.076923
+      successful_flips_per_flip (ratio productive effort): 0.012508
+      average_after_init_num_bad: 27.384615
+      total_successful_flips_incl_resets: 38
+      total_successful_reset_count: 1
+
+Next comes the total execution time, followed by a group of statistics
+(mostly) relative to execution time.  The flip per seconds is the best
+measurement of raw CPU speed.
+
+      ASSIGNMENT FOUND
+
+      seconds_per_assign: 0.640000
+      successful_flips_per_assign: 38.000000
+      successful_flips_incl_resets_per_assign: 38.000000
+      flips_per_assign: 3038.000000
+      average_reset_count_each_assign: 1.000000
+      tries_per_assign: 13.000000
+      flips_per_successful_flip: 79.947368
+
+Then the report indicates ASSIGNMENT FOUND (or not); if one was found,
+a group of statistics relative to the number of assignments found
+follows.
+
+      Distribution of bad_clause_count:
+      bad:         tries:
+      0              1
+      1              5
+      2              6
+      3              0
+      4              1
+      5              0
+      6              0
+      7              0
+      8              0
+      9              0
+      10              0
+      End of distribution
+
+      Distribution of reset_bad_clause_count:
+      bad:         reset_groups:
+      0              1
+      1              5
+      2              6
+      3              0
+      4              1
+      5              0
+      6              0
+      7              0
+      8              0
+      9              0
+      10              0
+      End of distribution
+
+Next appear two tables, where the first gives the distribution of the
+number of unsatisfied ("bad") clauses at the end of each try, and the
+second gives the same information relative to "reset groups" using the
+"reset" option described later.
+
+      best_flip:              38
+      best_try:               13
+      best_num_bad:           0
+      best_max_diff:          1
+      best_downwards:         17
+      best_sideways:          21
+      best_upwards:           0
+      best_forced:            0
+      best_null:              0
+      best_reset_count:       1
+      best_flips_incl_resets: 38
+
+      REPORT END
+
+Finally, the report includes some statistics on (one of the) best
+assignments found.  GSAT version 26 and later also include a series of
+lines summarizing the performance of GSAT on each try.  This concludes
+a regular, "short" report; using the "long" option described below,
+the report is extended to include the best assignment itself, and a
+long table of statistics about each individual variable.
+
+
+V. WFF FILE FORMATS
+
+In all wff file formats, varables are represented by integers (not
+including 0), where positive integers stand for positive literals,
+and negative integers are the corresponding negative literals.
+Wff files may be any of the following formats:
+
+(1) kf-format:  Sequence of numbers of the following form,
+	#vars #clauses
+	length_clause_1 lit lit ...
+	length_clause_2 lit lit ...
+	...
+Blanks, tabs, and end of lines are ignored.  The preferred file suffix
+is .kf.
+
+(2) f-format: Sequence of parenthesized lists of the form:
+	(lit lit ... )
+	(lit lit ... )
+	...		
+Each list is a clause.  Blanks, tabs, and end of lines are ignored.
+The end of the wff may be marked by a line beginning with a %, after
+which everything is ignored.  When creating f-format files (using the
+convert option), GSAT ends the file with
+	%
+	0
+which is ignored by GSAT, but is used as an "end of file" marker by
+some other satisfiability programs. The preferred file suffix is .f.
+
+(3) np-format: Sequence of lines of integers, where each line is a clause:
+	lit lit ...
+	lit lit ...
+	...
+As before, the end of the wff may be marked by a line beginning with
+%.  Note that in this format end of lines are meaningful!  The
+preferred file suffix is .np.
+
+GSAT automatically reads all file formats; if a file suffix is
+specified, then it tries to interpret it according to that format.
+Otherwise, it first tries to parse it as a kf file; if that fails, it
+tries to parse it as an f file; if that fails, it finally tries to
+parse it as an np-file.
+
+Sometimes errors in a kf file (when the filename does not have a .kf
+extension) will cause it to be interpreted as an np file -- watch for
+this!  This possible misinterpretation of corrupted .kf files can also
+be prevented by using the "kf" optional parameter described below.
+
+
+VI.  OPTIONAL PARAMETERS
+
+Typing "?" at the "option (? for help):" prompt prints a complete list
+of options currently available.  Following are the options available
+in version 24 of GSAT.  N and M stand for integers, and F for a
+floating-point number (generally from 0 to 1.0).
+
+      adaptive [N] = adaptive initialization with N mutations;
+               use N = -1 (not zero!) for no mutations
+
+The adaptive initialization strategy is to generate each starting
+state, after the first try, by taking the best assignment found during
+the previous try, and making N random changes in it.  Note that we use
+an assignment with a minimal "low-bad" number from the previous try --
+not the best assignment overall from ALL previous tries.
+
+      anneal [FILE] = read annealing schedule from FILE, or stdin if no file
+
+Instead of performing greedy local search, perform simulated
+annealing.  The format of annealing schedules is described in a
+section below.
+
+      b N M = boost at threshhold N for M more flips
+
+If MAX_FLIPS have been performed during a try, and the current num_bad
+is less than or equal to N (but not 0), then continue on for M more
+flips.
+
+      best N = save best & low assigns that score <= N;
+               use N = 0 to only consider LAST assign of each try
+
+This option modifies an efficiency hack GSAT uses for storing the best
+assignment found during a try.  The original implementation of GSAT
+copied the current assignment to a "save" area whenever the number of
+unsatisfied clauses reached a new minimum.  When the number of clauses
+is very large, however, this is very wasteful.  For example, GSAT
+might begin with 10,000 unsatisifed clauses, and in only 10,000 flips
+get down to 5 unsatisfied clauses.  The first 9,995 times the
+assignment is copied to the save area is essentially wasted effort.
+Thus this option instructs GSAT not to start saving the best
+assignment found until the number of unsatisfied clauses drops below
+N.  The default value of N is 20.  If the user specifies 0, then the
+LAST assignment found is considered to be the best of the try, even if
+it does not satisfy all clauses.  (Note: this option will probably be
+rendered obsolete by improvements in a future version of GSAT.)
+
+If several assignments are equally good during a try, then GSAT
+decides which one to save according to the following strategy:  
+save only the FIRST assignment found during a try that minimizes the
+number of bad clauses, UNLESS the LAST assignment of the try is
+equally good --- in which case save this last assignment instead.
+
+      c FILE = convert input wff and save as FILE
+
+Don't execute GSAT; instead, simply convert the input file, by
+changing .kf files to .f format, and both .f and .np format to .kf
+format.
+
+      color K = assume implicit clauses for a K-coloring
+
+This options allows large graph coloring problems to be encoded as
+wffs using less memory.  The special wff format is described in a
+section below.
+
+      d = downward moves only
+
+Halt a try if no downward move can be performed.
+
+      fix = use fixed random initialization for each random reset
+
+      force = force binaries clauses to be satisfied
+
+After each variable is flipped, try to flip all other variables that
+appear in binary clauses with the former, so that those clauses are
+satisfied.  (Option eliminated in version 25).
+
+Use the same random start state for each try.
+
+      hillclimb = perform hillclimbing rather than greedy search
+
+With this option, GSAT divides variables into three buckets, those
+with diff>0, diff==0, and diff<0.  Then it randomly picks from the
+best bucket.  This option yields dramatic speed increases when there
+are large numbers of variables and the "walk" option is used (20 times
+speedup is common).  It is an open question as to whether it hurts
+performance on smaller wffs.
+
+      kf = input MUST be Karmarkar .kf format, error otherwise
+
+Don't guess at the file format, only parse .kf files.
+
+      long = print long report, including counts
+
+The long report format includes the assignment, and statistics about
+how many times each variable was flipped.
+
+      m = find multiple assigns
+
+Don't stop after finding the first solution.  This option should be
+used to generate a meaningful bad clause distribution table in the
+report.
+
+      np = input wff is no-parenthesis f-format
+
+Don't guess at the file format, only parse .np files.
+
+      positive F = probability that var inits to true is F (default 0.5)
+
+This gives the expected percentage of the variables that are
+initialized to TRUE at the start of each try.
+
+      p = init with unit propagation
+
+Initialize variables sequentially, and perform unit propagation after
+each assignment.  After a conflict is reached, assign remaining values
+randomly.
+
+      pause M = pause M seconds between flips (may be a decimal number)
+
+This option does not currently work on non-Sun architectures.
+
+      r N = random reset after N tries (default = 1)
+
+This option invokes the "averaging" strategy for creating initial
+assignments.  After the first two tries, create each initial
+assignment by "averaging" the best assignments found during each of
+the two previous tries.  The average of two assignments matches the
+two on those variables on which they agree, and gives random values to
+variables on which they disagree.  After N tries, start out with a
+new, completely random starting state.  This option is much like a
+genetic algorithm with a population size of 2.
+
+      rand N = use random method number N (default 1)
+
+Value 1 means use the standard random() function, 2 means use a custom
+random number generator urand() (written by L. Auton).
+
+      report N = print report after every N tries (default = 1000)
+
+This can be used to print out the report file during a run, instead of
+just at the very end.   If GSAT is running interactively, interrupting
+it with control-C TWICE, and then typing "y" when it asks if it should
+continue, will also generate an intermediate report.  GSAT also tries
+to print a report if it is killed by any signal.
+
+      s = sideways and downwards moves only
+
+Stop a try if only an upwards move is possible.
+
+      tabu N = use tabu list of length N
+
+After a variable is flipped, do not allow it to be changed again until
+N flips have occured, UNLESS doing so would create a new low_bad for
+the try.
+
+      seed N [M] = use N (and optionally M) as the random seed
+
+Set the random seed.  The seed normally consists of TWO integers.
+
+      trace FLAG = trace also: 1=flips + 2=flip_clauses + 4=diffs + 8=makes +
+                   16=walks + 32=anneal + 64=clauses + 128=tries + 256=best +
+                   512=tabu + 1024=orphans + 2048=assign
+            (default is tries = 128)
+      silent = reset trace to 0 (no tracing)
+
+These options control diagnostic output during execution.  "trace
+FLAG" turns on the corresponding kind of tracing, where FLAG can
+either be a word or the corresponding number in the list.  The most
+useful is "flips", which outs the progress of GSAT after each flip.
+"silent" turns off all output.  Note that if GSAT is executing
+interactively, hitting control-C ONCE also has the effect of turning
+off all tracing.
+
+      walk [all] F = random walk with probability F when max_diff<=0
+          F < 0 means random walk even when max_diff>0
+          keyword 'all' means randomly pick from all variables,
+          otherwise only pick variables with postive make
+
+The "random walk" strategy for satisfiability is to simply flip
+variables that appear in unsatisfied clauses.  (This strategy is known
+to solve 2SAT in quadratic time.)  This option lets the user MIX the
+random walk with the greedy strategy.  If F is a positive number
+between 0 and 1, and no downward move is possible (i.e. max_diff<=0),
+then with probability F flip ANY variable that appears in an
+unsatisfied clause INSTEAD of picking from the MAX_DIFF_LIST.  (Note
+that these alternatives are not exclusive -- some of the same
+variables may be chosen by either strategy.)  If F is a NEGATIVE
+number, then regardless of max_diff, make a random walk move instead
+of a greedy move with probability -F.
+
+The inclusion of the keyword "all" changes the random walk strategy so
+that flips are completely random, rather than concentrating on
+unsatisfied clauses.
+
+Current experiments indicate best performance when the "all" option is NOT
+included, and F is negative.
+
+      weight [N] [M] = use clause weights when selecting variable to flip
+          resetting weights every N tries (default 1 means reset each assign)
+          updating weights by M after each failure (default 1)
+
+This invokes a clause weighting strategy to escape from local minima.
+Initially, all clauses are of weight 1.  At the end of each try, the
+weight of each unsatisfied clause is increased by M.  Then variables
+are picked to flip that maximize the total weight of the satisfied
+clauses.
+
+Weights are NOT used in computing low_bad, num_bad, or in picking the
+best assignment to save -- all those reflect simple number of clauses.
+
+The user may determine if clause weights are reset to 1 before
+each assign is found, or if the weights are kept between multiple
+assigns.  The value for N determines this as follows:
+= 1 - reset at start of each (multiple) assign  (DEFAULT)
+> 1 - reset at start of each (multiple) assign and every N tries
+= -1 - reset at start of first assign only
+< -1 - reset at start of first assign and every N tries
+
+There is currently no way to specify initial weights in the wff file.
+
+P. Morris's "breakout" strategy (see his paper in AAAI-93) can be
+simulated with the following combination of options: weight;
+d; adaptive -1; best 0; r 1000000000.  That is, use weights, only make
+downward moves, restart from the previous end state; never do a
+completely random restart after the first.
+
+      xqueens FILE = use FILE to communicate with queens X graphics
+
+This option is used only with a special graphical demo of the n-queens
+problem.  See the files in the queens-demo/ subdirectory of the GSAT
+distribution for information on compiling and running the demo.
+
+      xgsat
+
+Create an X-windows display, that shows operation of the algorithm;
+unsatisfied clauses are represented by red squares, satisfied ones by
+green squares.
+
+
+VII.  USE OF SHELL SCRIPTS
+
+It is easy to write a shell script to run GSAT non-interactively, by
+re-directing stdin.  For example:
+
+      #!/bin/sh
+      gsat <<eof
+      wff
+      assignfile
+      reportfile
+      #flips
+      #tries
+      <optional parameters>
+
+
+      eof
+    
+Note that the lines of optional parameters are terminated by a blank
+line.  When GSAT is invoked from a script and encounters an error in
+the input, it will email the user a message describing the problem.
+
+
+VIII.  SIMULATED ANNEALING
+
+GSAT includes a simple simulated annealing option that may be run
+instead of or in conjunction with greedy local search.  The annealing
+files for the "anneal" option have the following format:
+
+(1) 0 or more keywords, one per line:
+	random		- pick vars randomly (default)
+	sequential	- pick vars in sequence
+	flips		- count each flip as a step (default)
+	picks		- count each pick as a step
+
+(2) 1 or more lines of any of the following formats:
+
+(2a)  Pairs of steps and temperature; e.g.
+	400 50
+A temperature of -1 means to run greedy instead of annealing for that
+many flips.  Temperatures are divided by 100, so e.g. 50.8 really
+means temperature = 0.508.  The change in energy function for a
+variable is simply its DIFF value.
+
+(2b)  A geometric progression, specified as
+	STEPS START_TEMP to END_TEMP by FACTOR
+For example,
+	100  50 to 20 by .8
+to mean anneal at temperature 50 for 100 steps, then at 50*0.8 for 100
+steps, then 50*0.8*0.8 steps, etc, stopping AFTER a run in which the
+temperature is 20 or less.  (E.g., the last 100 steps may be at
+19.89.)  Note that an END_TEMP of 0 specifies an infinite progression
+(which is only stopped by the MAX_FLIPS value in effect).
+
+(2c)  As above, but with the keyword "floor":
+	STEPS START_TEMP to END_TEMP by floor FACTOR
+In this case, the temperature is updated each time to
+	 floor( FACTOR * temp )
+
+(3) A blank line, or a terminating keyword:
+	end		- end of schedule
+	repeat N	- repeat the last N lines indefinitely
+	repeat N M	- repeat the last N lines M times
+
+If a value for MAX_FLIPS can be calculated from the schedule, it is
+used to reset MAX_FLIPS.  If the schedule specifies a finite number of
+picks instead, then the algorithm terminates whenever EITHER that many
+picks have been performed OR MAX_FLIPS flips have been performed.
+
+A "null" move is counted when a variable is picked but NOT flipped.
+
+Note that at low temperatures where the "flips" option is in effect
+the running time may vary greatly between trials, due to wide
+variations in the number of times a variable is picked and not
+flipped.
+
+
+IX.  GRAPH COLORING PROBLEMS
+
+GSAT appears to be particularly well-suited for solving wffs that
+result from translations of graph coloring problems.  For example, the
+following simple 3 node, 3-coloring problem can be encoded as follows:
+
+      A-----B
+       \   /
+        \ /
+         C----D
+
+There is a variable for each possible way to color a node.  Variables
+for a node are assigned sequentially.  For this example, we can use:
+	1 = node A is red
+	2 = node A is blue
+	3 = node A is green
+	4 = node B is red
+	5 = node B is blue
+	6 = node B is green
+	7 = node C is red
+	8 = node C is blue
+	9 = node C is green
+	10 = node D is red
+	11 = node D is blue
+	12 = node D is green
+The wff begins with a set of positive clauses to assert that each node
+receives some color:
+	(1 2 3)
+	(4 5 6)
+	(7 8 9)
+Then there are a large number of clauses to assert that no adjacent
+nodes receive the same color.  Note that (number of colors) * (number
+of arcs) clauses are needed.
+	(-1 -4)
+	(-2 -5)
+	(-3 -6)
+	(-1 -7)
+	(-2 -8)
+	(-3 -9)
+	(-4 -7)
+	(-5 -8)
+	(-6 -9)
+	(-7 -10)
+	(-8 -11)
+	(-9 -12)
+We do not need to include any clauses to assert that a node contains
+no more than one color, because if a solution exists that assigns
+several colors to a node, it is easy to transform it to one that
+assigns exactly one color to every node.
+
+Although this translation of the coloring problem only creates a
+quadratic blowup in its size, the resulting formula can still be too
+large to fit into memory if there are hundreds of nodes and dozens of
+possible colors.  Therefore the "color" optional parameter mentioned
+above allows the system to reason with an abbreviated form of the
+formula.
+
+When the "color" option is used, only negative clauses involving the
+FIRST (red) color should be included in the wff file.  In this
+example, the user would enter
+      option (? for help): color 3
+and the wff file would contain just
+	(1 2 3)
+	(4 5 6)
+	(7 8 9)
+	(-1 -4)
+	(-1 -7)
+	(-4 -7)
+	(-7 -10)
+Note that wff now contains only (# nodes) + (# arcs) clauses.
+However, GSAT operates EXACTLY AS IF all the missing clauses actually
+appeared in the formula.
+
+It is important to understand that the number of possible colors is
+FIXED for a given abbreviated wff.  For example, using the wff above
+with the option
+      option (? for help): color 4
+would NOT find a 4-coloring of the graph; it would simply generate
+nonsense.
+
+The color option is not fully compatible with the "weight" option
+described above.  Although using the weight option should not lead to
+an error, the effect would be that a violated constraint involving ANY
+color on an arc would increase the weight of ALL of the constraints
+involving that arc.
+
+
+X.  AMPL INTERFACE
+
+AMPL is a modeling language for mathematical programming, in
+particular linear and integer programming.  The AMPL system (a
+commercial product, sold by AT&T and The Scientific Press) serves as a
+front-end to a number of low-level linear and integer program solving
+packages, such as MINOS (distributed with AMPL), OSL (a separate
+product sold by IBM), CPLEX (sold by the CPLEX Corp.)  and KORBX (sold
+by Advanced Decision Support Systems).
+
+The problem of finding any feasible solution to an integer programming
+problem where all variables are constrained to take on the values 0 or
+1 is equivalent to propositional satisfiability.  The "agsat" package,
+included in the GSAT distribution, provides an interface between AMPL
+and GSAT.
+
+For example, following is the 10-Queens problems, expressed in the
+AMPL language:
+
+	param n := 10;
+	
+	var sq {1..n, 1..n} binary;
+	
+	subject to row_eqn {i in 1..n}:
+		sum {j in 1..n} sq[i,j] = 1;
+	
+	subject to column_eqn {j in 1..n}:
+		sum {i in 1..n} sq[i,j] <= 1;
+	
+	subject to diagonal_eqn {i in 1..n,
+				j in 1..n,
+				k in 1..n,
+				L in 1..n:
+				abs(k-i)==abs(L-j) &&
+				! (i==k && j==L)}:
+		sq[i,j] + sq[k,L] <= 1;
+
+To use GSAT with AMPL, you must first obtain and install those two
+programs.  Then compile the programs in the agsat/ subdirectory of
+the GSAT distribution, and install the following executables:
+	agsat		- shell script
+	ampl2eqn	- binary executable
+	eqn2clause	- binary executable
+	gsat2sol	- binary executable
+Run AMPL, and enter the following commands to indicate that GSAT
+is the solver:
+	option solver agsat;
+	option agsat_oopt g;
+MAX_FLIPS and MAX_TRIES are specified from AMPL as follows:
+	option agsat_flips x3;
+	option agsat_tries 100;
+All other options specified as a single long string assigned to the
+environmental variable "agsat_params", where end of lines are
+indicated by colons (:) -- for example,
+	option agsat_params "weight:negative 0.8"; 
+To create a readable foobar.agsat_report file (as well as foobar.nl):
+	option nl_comments 1;
+	write gfoobar;
+The "solve" command will then instantiate the current model and invoke
+GSAT to solve it.
+
+The translation from 0/1 integer programming to SAT used by the
+interface maintains a 1 to 1 mapping between variables.  Because of
+this, there can be in the worst case an exponential blowup in the
+number of clauses in the wff.
+
+
+XI.  INTERPRETING REPORT FILES
+
+The distribution includes the script 'interp' to aid in interpreting
+report files.  In order to use:
+
+For each wff file foo.f (or foo.kf or foo.np) there should
+exist a "map" file.  Each line of the map file contains the
+symbolic representation of the proposition given the
+corresponding line number.  E.g., if the variable 2 in the
+wff stored in "colorprob.f" should be interpreted as the string 
+"(color n3 red)", then 	the second line of the file
+"colorprob.map" should be (color n3 red).
+
+To print an interpretation of the best assignment recorded
+in a report file, simply execute
+	% interp reportfile
+where the current directory contains the map file corresponding to the
+wff described by the report file.
+
+XII.  BUGS
+
+GSAT has internal checks that monitor itself for error conditions.  If
+a bug is detected, GSAT will send email to that effect to the user.
+If you receive such error reports, and are SURE your input files and
+parameters are correct, please contact us!  Please send all comments
+to both {selman,kautz}@research.att.com.
+
+
+XIII.  VERSION INFORMATION
+
+12/93 -- Version 35.  Solaris compatible.
+9/93 -- Version 33.  Bigflip option.
+9/93 -- Version 32.  Fixes bug in max_diff_list.
+8/93 -- Version 31.  Includes xgsat option.
+5/2/93 -- Version 26.  Merged 24 and 25, with "hillclimb" option.
+4/29/93 -- Version 24C, 25D.  Reports include try info; default 
+	report file names.
+4/27/93 -- Version 25B. Fixed bug in rotate_tabu_list.
+4/21/93 -- Version 25.  3-buckets replace MAX_DIFF_LIST.
+4/16/93 -- Version 24.  Walk compatible with color option.
+3/30/93 -- Version 22.  Tabu list.
+3/4/93 -- Version 20.  Crash and burn code.
+1/18/93 -- Version 18.  Bug fixes and better tracing.
+9/30/92 -- Version 17.  Adds simulated annealing.
+  Modularizes code.  C++ compatible:  compiles
+  under either cc or CC.  Improves error handling.
+8/21/92 -- Version 15. fixed bug in how resets and multiple
+  assigns are handled.
+6/3/92 -- Version 12. Adds weights.
+4/25/92 -- Version 8.  Properly handles clauses
+  containing repeated and complementary literals.
+3/25/92 -- Version 7.  More options for
+  randomization.
+3/17/92 -- Version 6.  Includes a better
+  randomization function, urand(rd).
+3/5/92 -- Version 5.  Includes a better way of
+  handling the free_list used in unit propagation.
+2/26/92 -- Version 4.  It is approximately 5 times
+  as fast as previous versions, can read several different input wff 
+  formats, can be killed without losing the reports file.
+
+
+XIV.  REFERENCES
+
+B. Selman, H.J. Levesque H.J., and D. Mitchell, "A New Method for
+Solving Hard Satisfiability Problems" in Proceedings of the 10th
+National Conference on Artificial Intelligence (AAAI-92), San Jose,
+CA, 1992.
+
+B. Selman and H. Kautz, "Domain-Independent Extensions to GSAT:
+Solving Large Structured Satisfiability Problems", in Proceedings of
+the 13th International Conference on Artificial Intelligence
+(IJCAI-93), Chambery, France, 1993.
+
+B. Selman and H. Kautz, "An Empirical Study of Greedy Local Search for
+Satisfiability Testing", in Proceedings of the 11th National
+Conference on Artificial Intelligence (AAAI-93), Washington, DC, 1992.
+
+R. Fourer, D.M. Gay, & B.W. Kernighan, AMPL: A Modeling Language for
+Mathematical Programming, Scientific Press, 1993.
+

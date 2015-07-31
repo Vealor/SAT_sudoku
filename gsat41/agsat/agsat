@@ -1,0 +1,63 @@
+#!/bin/csh -f -e
+#  agsat -- GSAT for AMPL
+#  To invoke from AMPL:
+#    option solver agsat;
+#    option agsat_oopt g;
+#  Following are optional:
+#    option agsat_flips x3;
+#    option agsat_tries 100;
+#    option agsat_params "weight:negative 0.8"; 
+#    solve;
+#  To create a readable foobar.nl file:
+#    option nl_comments 1;
+#    write gfoobar;
+
+set stub=$1
+
+if ( ! $?agsat_flips) then
+	setenv agsat_flips x5
+endif
+if ( ! $?agsat_tries) then
+	setenv agsat_tries 1000
+endif
+
+if ($?agsat_params) then
+	echo "$agsat_params" | tr ":" "\012" > ${stub}.agsat_params
+else
+	echo > ${stub}.agsat_params
+endif
+
+cat ${stub}.nl | ampl2eqn | eqn2clause -offset > ${stub}.agsat_in
+
+if ($status) then
+	echo "Conversion AMPL->GSAT fails"
+	exit -1
+endif
+
+echo "Created wff: stats"
+ls -l ${stub}.agsat_in
+wc ${stub}.agsat_in
+echo "Firing up gsat"
+
+gsat <<eofEOF
+${stub}.agsat_in
+${stub}.agsat_assign
+${stub}.agsat_report
+${agsat_flips}
+${agsat_tries}
+np
+`cat ${stub}.agsat_params`
+
+eofEOF
+
+cat ${stub}.agsat_assign | gsat2sol ${stub}.nl > ${stub}.sol
+
+if ($status) then
+	echo "Conversion GSAT->AMPL fails"
+	exit -1
+endif
+
+if ( ! $?nl_comments ) setenv nl_comments 0
+if (! $nl_comments) then
+	rm -f ${stub}.agsat_in ${stub}.agsat_assign ${stub}.agsat_report ${stub}.agsat_params
+endif

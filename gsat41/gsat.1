@@ -1,0 +1,164 @@
+.TH GSAT 1
+.SH NAME
+gsat \(mi Greedy satisfiability tester
+.SH SYNOPSIS
+.B gsat
+.br
+.SH DESCRIPTION
+.I gsat
+is a randomized greedy local search program that solves
+propositional satisfiability problems expressed in clausal form.
+It begins with a random truth-assignment, and then repeatedly modifies
+it by ``flipping'' the values of variables.  
+The algorithm is ``greedy'' in that it always tries to pick a variable
+that reduces (or does not increase) the total number of unsatisfied clauses.
+If a satisfying
+assignment is not found after a specified maximum number of flips, it
+restarts at a different random state.  Each restart is called a ``try.''
+.PP
+The algorithm is incomplete.
+If the input formula has a satisfying assignment, it is likely 
+(but not guaranteed) to find it.
+It cannot be used to
+.I prove
+that an inconsistent formula is unsatisfiable.
+.I gsat
+is most useful for solving formulas that are too large to be handled
+by complete and exhaustive search.  
+.PP
+To run the program, type ``gsat'' and answer the prompts.
+.SH "PARAMETERS"
+.I gsat
+does not take any command-line parameters; instead, all parameters are
+entered by reading stdin in response to prompts.
+For example, the following specifies ``wff.f'' as the file containing
+the wff (well-formed formula), ``a'' as the name of the file in which
+to write the truth-assignment, and ``b'' as the name of the file in
+which to write a report.  Each try will consist of
+10 times the number of
+variables flips, and 100 tries maximum will be performed.
+.RS .5i
+> 
+.I gsat
+.br
+program: gsat version 18, January 1993
+.br
+wff_file: 
+.I wff.f
+.br
+assign file (default = /dev/null): 
+.I a
+.br
+report file (default = /dev/null): 
+.I b
+.br
+max flips (default = # vars x 5; enter N or xN): 
+.I x10
+.br
+max tries (default = 1): 
+.I 100
+.br
+option (? for help):
+.RE
+The program then reads a series of optional parameters, until a blank
+line is entered.  There are many optional parameters.  For a full
+list, type ``?'' in response to the prompt.  Some of the more
+important optional parameters are:
+.TP
+.B "r 10"
+-- Use the averaging strategy with refresh every 10 tries.
+.TP
+.B "walk 0.25"
+-- 25% of the time, randomly choose a variable that appears in an
+unsatisfied clause, instead of performing a greedy move.
+.TP
+.B "weight"
+-- Use the clause weight strategy.
+.TP
+.B "report 10"
+-- Update report file every 10 tries.
+.TP
+.B "trace OPTION"
+-- Print additional info, after each flip and/or try.
+OPTIONS can be:
+.br
+flips -- Show each flip.
+.br
+flip_clauses  -- Show unsat clauses after each flip.
+.br
+diffs -- Show vars with highest diff values.
+.br
+makes -- Ditto for make values.
+.br
+walks  -- Trace vars picked with ``walk'' option.
+.br
+anneal -- Trace each line in annealing schedule.
+.br
+clauses  -- Show unsat clauses after each try.
+.br
+tries -- Print summary of each try.
+.TP
+.B silent
+-- Perform no tracing.
+.TP
+.B "anneal FILE"
+-- Perform simulated annealing using schedule in FILE.
+If no file given, read schedule from stdin.  If input is from 
+stdin, entering a ``?'' will print help about the format of annealing schedules.
+.TP
+.B "c FILE"
+-- Converts wff format and save as FILE.
+.TP
+.B m
+-- Find multiple assigns (i.e, don't stop after first assign found).
+.PP
+For more information, read the file ``code/gsat/GSAT_USERS_GUIDE'' in the
+distribution directory described below.
+.SH "INPUT FILE FORMATS"
+Wff files may be any of the following formats:
+.sp
+(1) kf-format:  sequence of numbers of the following form,
+.RS .5i
+#vars #clauses
+.br
+length_clause_1 lit lit ...
+.RE
+Blanks, tabs, and end of lines are ignored.
+Preferred file suffix: .kf
+.sp
+(2) f-format: sequence of parenthesized lists of the form:
+.RS .5i
+(lit lit ... )
+.RE
+Each list is a clause.  Blanks, tabs, and end of lines are 
+ignored.  The end of the wff may be marked by a line
+beginning with a %, after which everything is ignored.
+Preferred file suffix: .f
+.sp
+(3) Non-parenthesized f-format (np-format), which consists of
+lines of integers, where each line is a clause:
+.RS .5i
+lit lit ...
+.RE
+As before, the end of the wff may be marked by a line
+beginning with %.  Note that in this format end of
+lines are meaningful!
+Preferred file suffix: .np
+.SH FILES
+.PP
+/home/kautz/research/sat/dist -- Distribution directory for 
+.I gsat.
+In the distribution directory, see:
+.PP
+code/gsat/GSAT_USERS_GUIDE -- Detailed information about running 
+.I gsat.
+.PP
+papers/ -- Collection of papers about 
+.I gsat
+(Postscript).
+.SH REFERENCES
+B. Selman, H. Levesque, and D. Mitchell,
+``A New Method for Solving Hard Satisfiability Problems'',
+.ul
+Proceedings of AAAI-92.
+Also appears in the distribution directory.

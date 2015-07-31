@@ -1,0 +1,22 @@
+This directory contains the interface between AMPL and GSAT.
+
+Your path must include the following executables:
+	gsat
+	agsat
+	ampl2eqn
+	eqn2clause
+	gsat2sol
+
+To invoke from gsat from AMPL:
+    option solver agsat;
+    option agsat_oopt g;
+
+Flips and tries specified as follows:
+    option agsat_flips x3;
+    option agsat_tries 100;
+
+All other options specified as a single long string,
+where end of lines are indicated by colons (:) --
+    option agsat_params "weight:negative 0.8"; 
+
+
