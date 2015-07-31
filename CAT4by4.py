@@ -62,25 +62,27 @@ def checkMiniSat():
 		return
 #==============================================================================
 def toBase10(num):
-	return (num-1)%9+1
+	return (num-1)%4+1
 #==============================================================================
-def toBase9(i,j,k):
-	return str((i-1)*81+(j-1)*9+k)
+def toBase4(i,j,k):
+	return str((i-1)*16+(j-1)*4+k)
 #==============================================================================
 def getdimacs(puzzle):
 	xaxis = 1
 	yaxis = 1
 	count = 0
 	dimacs = []
-	while(xaxis < 10):
+	length = len(puzzle)
+	sqrtlen = int(math.sqrt(length))
+	while(xaxis < sqrtlen+1):
 		#print count
 		if puzzle[count] == 0:
-			dimnum = ((81*(int(float(xaxis)) - 1)) + (9*(int(float(yaxis)) - 1)) + ((int(float(puzzle[count]))) + 1))
+			dimnum = ((length*(int(float(xaxis)) - 1)) + (sqrtlen*(int(float(yaxis)) - 1)) + ((int(float(puzzle[count]))) + 1))
 		else:
-			dimnum = ((81*(int(float(xaxis)) - 1)) + (9*(int(float(yaxis)) - 1)) + ((int(float(puzzle[count]))) ))
+			dimnum = ((length*(int(float(xaxis)) - 1)) + (sqrtlen*(int(float(yaxis)) - 1)) + ((int(float(puzzle[count]))) ))
 		dimacs.append(dimnum)
 		yaxis += 1
-		if(yaxis == 10):
+		if(yaxis == sqrtlen+1):
 			xaxis += 1
 			yaxis = 1
 		count += 1
@@ -98,9 +100,9 @@ def numcell(outfile, ret, puzzle):
 		if(puzzle[i] != '0'):
 			outfile.write(str(ret[i]) + ' 0\n')
 		else:
-			loc = divmod(i, 9)
-			for x in range(1, 10):
-				num = (loc[0]*81+loc[1]*9+x)
+			loc = divmod(i, 4)
+			for x in range(1, 5):
+				num = (loc[0]*16+loc[1]*4+x)
 				outfile.write(str(num) + ' ')
 			outfile.write('0\n')
 
@@ -110,11 +112,11 @@ def onenumrow(outfile):
 		outfile = open("input", "a")
 	except:
 		print "Can't open file to write!"
-	for i in range(1, 10): #for each row
-		for k in range(1, 10):
-			for j in range(1, 9):
-				for l in range(j+1, 10):
-					outfile.write("-" + toBase9(i,j,k) + " -" + toBase9(i,l,k) + " 0\n")
+	for i in range(1, 5): #for each row
+		for k in range(1, 5): #for each col
+			for j in range(1, 4): #for each entry 
+				for l in range(j+1, 5):
+					outfile.write("-" + toBase4(i,j,k) + " -" + toBase4(i,l,k) + " 0\n")
 
 # #==============================================================================
 def onenumcol(outfile):
@@ -122,32 +124,32 @@ def onenumcol(outfile):
 		outfile = open("input", "a")
 	except:
 		print "Can't open file to write!"
-	for j in range(1, 10):
-		for k in range(1, 10):
-			for i in range (1, 9):
-				for l in range(i+1, 10):
-					outfile.write("-" + toBase9(i,j,k) + " -" + toBase9(l,j,k) + " 0\n")
+	for j in range(1, 5):
+		for k in range(1, 5):
+			for i in range (1, 4):
+				for l in range(i+1, 5):
+					outfile.write("-" + toBase4(i,j,k) + " -" + toBase4(l,j,k) + " 0\n")
 # #==============================================================================
 def onenumblock(outfile):
 	try:
 		outfile = open("input", "a")
 	except:
 		print "Can't open file to write!"
-	for k in range(1, 10):
-		for a in range(0, 3):
-			for b in range(0, 3):
-				for u in range(1, 4):
-					for v in range(1, 3):
-						for w in range(v+1, 4):
-							outfile.write("-" + toBase9(3*a+u,3*b+v,k) + " -" + toBase9(3*a+u,3*b+w,k) + " 0\n")
-	for k in range(1, 10):
-		for a in range(0, 3):
-			for b in range(0, 3):
+	for k in range(1, 5):
+		for a in range(0, 2):
+			for b in range(0, 2):
 				for u in range(1, 3):
-					for v in range(1, 4):
-						for w in range(u+1, 4):
-							for t in range(1, 4):
-								outfile.write("-" + toBase9(3*a+u,3*b+v,k) + " -" + toBase9(3*a+w,3*b+t,k) + " 0\n")
+					for v in range(1, 2):
+						for w in range(v+1, 3):
+							outfile.write("-" + toBase4(2*a+u,2*b+v,k) + " -" + toBase4(2*a+u,2*b+w,k) + " 0\n")
+	for k in range(1, 5):
+		for a in range(0, 2):
+			for b in range(0, 2):
+				for u in range(1, 2):
+					for v in range(1, 3):
+						for w in range(u+1, 3):
+							for t in range(1, 3):
+								outfile.write("-" + toBase4(2*a+u,2*b+v,k) + " -" + toBase4(2*a+w,2*b+t,k) + " 0\n")
 #==============================================================================
 def createcnf(ret, puzzle):
 	canwrite = False
@@ -158,7 +160,7 @@ def createcnf(ret, puzzle):
 		print "Can't open file to write!"
 	if canwrite:
 		with outfile:
-			outfile.write('p cnf 729 5529\n')
+			outfile.write('p cnf 64 135\n')
 
 		numcell(outfile, ret, puzzle)
 		onenumrow(outfile)
@@ -167,7 +169,6 @@ def createcnf(ret, puzzle):
 
 #==============================================================================
 def runminisat():
-	#print("test")
 	subprocess.call(["minisat","input","output"])
 
 #==============================================================================
@@ -189,14 +190,17 @@ def main():
 	checkMiniSat()
 
 	#-- INPUT CHECK
+	canread = False
 	if (len(sys.argv)!=2):
 		print "Usage: python CAT.py <input-file>"
 		return
 	try:			# check if can open file
 		with open(sys.argv[1],'r') as infile:
 			puzzle = infile.read().replace('\n', '').replace('?', '0').replace('*', '0').replace('.', '0')
+		canread = True
 	except IndexError: 	# read from stdin if no file
 		infile = sys.stdin
+		canread = True
 	except IOError:		#file doesn't exist so print error!
 		print("File specified does not exist!")
 
@@ -211,13 +215,17 @@ def main():
 
 	#run miniSAT using CNF
 	runminisat()
-
+	
 	#get solution
 	solvedsudoku = getsolved()
 	
 	#print
 	prettyPrint(solvedsudoku)
-	
+
+	#test print
+	# test = range(4)*4
+	# prettyPrint(test)
+
 #==============================================================================
 if __name__ == "__main__":
 	main()
